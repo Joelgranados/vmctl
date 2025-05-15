@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2025 Samsung Electronics Co., Ltd. All Rights Reserved.
+#
+# Written by Joel Granados <joel.granados@kernel.org>
+
+_qemu_virtiofs_force_memshare() {
+  # memshare for virtiofs https://virtio-fs.gitlab.io/howto-qemu.html
+  if [[ ! -v GUEST_MEMORY ]]; then
+    _fatal 1 "${FUNCNAME[0]}: GUEST_MEMORY variable is undefined"
+  fi
+
+  if [[ "${QEMU_PARAMS[*]}" != *"memory-backend-file"* ]]; then
+    QEMU_PARAMS+=("-object" "memory-backend-file,id=mem,size=${GUEST_MEMORY},mem-path=/dev/shm,share=on")
+    QEMU_PARAMS+=("-numa" "node,memdev=mem")
+  fi
+}
+
+qemu_virtiofsd_add_shared() {
+  _require_program virtiofsd
+
+  local long="shared-dir:,tag:"
+
+  if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
+    exit 1
+  fi
+
+  eval set -- "$tmp"
+  unset tmp
+
+  while true; do
+    case "$1" in
+      '--shared-dir' )
+        local shared_dir="$2"; shift 2
+        ;;
+      '--tag' )
+        local tag="$2"; shift 2;
+        ;;
+      '--' )
+        shift; break
+        ;;
+      * )
+        _fatal 1 "unknown argument '$1'"
+        ;;
+    esac
+  done
+
+  if [[ ! -v shared_dir ]]; then
+    _fatal 1 "${FUNCNAME[0]}: missing required '--shared-dir' argument"
+  fi
+
+  if [[ ! -d ${shared_dir} ]]; then
+    _fatal 1 "${FUNCNAME[0]}: ${shared_dir} does not exist"
+  fi
+
+  if [[ ! -v tag ]]; then
+    _fatal 1 "${FUNCNAME[0]}: missing required '--tag' argument"
+  fi
+
+  local socket_path="${VMRUN}/${tag}.sock"
+  local devid="char${tag}"
+  local chardev_params="socket,id=${devid},path=${socket_path}"
+  local device_params="vhost-user-fs-pci,chardev=${devid},tag=${tag}"
+
+  cmd="virtiofsd --shared-dir \"${shared_dir}\" --tag \"${tag}\" \
+    --socket-path \"${socket_path}\" --log-level off"
+  eval "${cmd}" &
+
+  _qemu_virtiofs_force_memshare
+
+  QEMU_PARAMS+=("-chardev" "${chardev_params}")
+  QEMU_PARAMS+=("-device" "${device_params}")
+}
+
+
+
+
