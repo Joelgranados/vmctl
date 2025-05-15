@@ -229,6 +229,14 @@ _run() {
 	  _pre
   fi
 
+  if [[ -v VMPRE ]]; then
+    for cmd in "${VMPRE[@]}"; do
+      if ! eval "$cmd" ; then
+        _fatal 1 "Evaluation of ${cmd} failed"
+      fi
+    done
+  fi
+
   if [[ -v do_gdb ]]; then
     gdb -ex "handle SIGUSR1 pass noprint" -ex "handle SIGPIPE nostop" --args "$QEMU_SYSTEM_BINARY" "${params[@]}"
     #lldb -- "$QEMU_SYSTEM_BINARY" "${params[@]}"
