@@ -145,6 +145,10 @@ _is_daemonized() {
   return 1
 }
 
+_add_pre_cmd() {
+  VMPRE+=("$1")
+}
+
 _load_vm() {
   declare -xg VMNAME VMROOT VMIMG VMSTATE VMRUN VMLOG
 
