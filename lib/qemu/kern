@@ -6,7 +6,7 @@
 
 
 _qemu_kern_noimg_add() {
-  _fatal 1 "${FUNCNAME[0]} is not supported yet"
+  qemu_nix_add_noimgnix
 }
 
 _qemu_kern_img_add() {
