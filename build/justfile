@@ -1,0 +1,41 @@
+# compile init and make init.img
+all: init init_img
+
+init:
+  gcc -static -o init init.c
+
+init_img:
+  rm -f init.img
+  fd init$ | cpio -ov -H newc > init.img
+
+# Launch qemu
+start_qemu:
+  /home/joel/src/qemu/bdir/qemu-system-x86_64 \
+    -nodefaults \
+    -display "none" \
+    -machine "q35,accel=kvm,kernel-irqchip=split" \
+    -cpu "host" \
+    -smp "4" \
+    -m "8G" \
+    -object "memory-backend-file,id=mem,size=8G,mem-path=/dev/shm,share=on" \
+    -numa "node,memdev=mem" \
+    -netdev "user,id=net0,hostfwd=tcp::2222-:22" \
+    -device "virtio-net-pci,netdev=net0" \
+    -device "virtio-rng-pci" \
+    -kernel "/home/joel/src/linux/bnixvm/arch/x86_64/boot/bzImage" \
+    -append "root=/dev/ram0 console=ttyS0,115200 audit=0 earlyprintk=serial nokaslr loglevel=8 debug -- /nix/store/6l8pykszb975pza65i9bxw55bfps8kvk-nixos-system-unnamed-24.11.20250517.9b5ac7a" \
+    -initrd "/home/joel/src/vmctl/build/init.img" \
+    -chardev "socket,id=charnixshare,path=nixstore.socket" \
+    -device "vhost-user-fs-pci,chardev=charnixshare,tag=nixstore" \
+    -pidfile "/home/joel/vms/run/test/pidfile" \
+    -serial "mon:stdio" \
+    -d "guest_errors" \
+    -D "/home/joel/vms/log/test/qemu.log"
+
+
+# kill qemu
+kill_qemu:
+   kill -9  $(pgrep -f "qemu-system-x86_64")
+
+virtiofs share_dir tag socket_path:
+  virtiofsd --shared-dir {{ share_dir }} --tag {{ tag }} --socket-path {{ socket_path }} --log-level off &
