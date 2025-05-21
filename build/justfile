@@ -1,4 +1,7 @@
 # compile init and make init.img
+nix_root := \
+"/nix/store/84960s5p4zv3i8rw3w4mshkxg6hl285b-nixos-system-unnamed-24.11.20250517.9b5ac7a"
+
 all: init init_img
 
 init:
@@ -23,7 +26,7 @@ start_qemu:
     -device "virtio-net-pci,netdev=net0" \
     -device "virtio-rng-pci" \
     -kernel "/home/joel/src/linux/bnixvm/arch/x86_64/boot/bzImage" \
-    -append "root=/dev/ram0 console=ttyS0,115200 audit=0 earlyprintk=serial nokaslr loglevel=8 debug -- /nix/store/6l8pykszb975pza65i9bxw55bfps8kvk-nixos-system-unnamed-24.11.20250517.9b5ac7a" \
+    -append "root=/dev/ram0 console=ttyS0,115200 audit=0 earlyprintk=serial nokaslr -- {{ nix_root }}" \
     -initrd "/home/joel/src/vmctl/build/init.img" \
     -chardev "socket,id=charnixshare,path=nixstore.socket" \
     -device "vhost-user-fs-pci,chardev=charnixshare,tag=nixstore" \
@@ -32,6 +35,7 @@ start_qemu:
     -d "guest_errors" \
     -D "/home/joel/vms/log/test/qemu.log"
 
+#-append "root=/dev/ram0 console=ttyS0,115200 audit=0 earlyprintk=serial nokaslr loglevel=8 debug -- /nix/store/7dqg41ghmrz0i7vciniqyyb0cfhfj4f4-nixos-system-unnamed-24.11.20250517.9b5ac7a" \
 
 # kill qemu
 kill_qemu:
