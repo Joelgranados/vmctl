@@ -1,11 +1,11 @@
 # compile init and make init.img
 nix_root := \
-"/nix/store/84960s5p4zv3i8rw3w4mshkxg6hl285b-nixos-system-unnamed-24.11.20250517.9b5ac7a"
+"/nix/store/84960s5p4zv3i8rw3w4mshkxg6hl285b-nixos-system-unnamed-24.11.20250517.9b5ac7a/init"
 
 all: init init_img
 
 init:
-  gcc -static -o init init.c
+  gcc -O3 -Os -s -ffunction-sections -fdata-sections -Wl,--gc-sections -static -o init vmctl_init.c
 
 init_img:
   rm -f init.img
