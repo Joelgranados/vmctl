@@ -14,7 +14,7 @@ running.
 
 2. Bootstrap a config directory with the following command:
 
-       $ ./vmctl env --confdir $HOME/vms --verbose --bootstrap
+       $ ./vmctl env --bootstrap $HOME/vms --verbose
 
    **Note** This will:
     * Check that `ssh` and `socat` are installed
