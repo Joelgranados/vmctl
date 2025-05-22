@@ -4,23 +4,19 @@
 #
 # Written by Joel Granados <joel.granados@kernel.org>
 
-USAGE="usage: ${BASENAME} env ARGS [OPTION...]
+USAGE="usage: ${BASENAME} env [OPTION...]
 
-Use vmctl command without installing it. The 'env' command will ensure vmctl
-is in \$PATH and change directory to <confdir>
-
-ARGS:
-  -c, --confdir     the path to the configuration dir
+Use vmctl command without installing it. 'env' adds vmctl to \$PATH
 
 OPTION:
-  -h, --help        display this help message and exit
-  -v, --verbose     detailed output
-  -b, --bootstrap   create <confdir> and copy examples
-                    will not enter vmctl environment"
+  -h, --help            display this help message and exit
+  -v, --verbose         detailed output
+  -b, --bootstrap DIR   create <DIR> and copy examples.
+                        will not enter vmctl environment"
 
 _env() {
-  local short="c:,b,h,v"
-  local long="confdir:,bootstrap,help,verbose"
+  local short="b,h,v"
+  local long="bootstrap:,help,verbose"
 
   if ! tmp=$(getopt -o "$short" --long "$long" -n "$BASENAME" -- "$@"); then
     exit 1
@@ -32,11 +28,8 @@ _env() {
   local verbose=""
   while true; do
     case "$1" in
-      '-c' | '--confdir' )
-        local confdir="$2"; shift 2
-        ;;
       '-b' | '--bootstrap' )
-        local bootstrap=1; shift
+        local bootstrap_dir="$2"; shift 2
         ;;
       '-h' | '--help' )
         _usage "$USAGE" 0
@@ -53,32 +46,24 @@ _env() {
     esac
   done
 
-  if [[ ! -v confdir ]]; then
-    _usage "$USAGE" 1
-  fi
-
-  if [[ ! -d "${confdir}" && ! -v bootstrap ]]; then
-    _fatal 1 "${FUNCNAME[0]}: ${confdir} does not exist.
-      run '${BASENAME} env -c ${confdir} --bootstrap' to fix the error"
-  fi
-
   # Init config if bootstrapping
-  if [[ -v bootstrap ]]; then
+  if [[ -v bootstrap_dir ]]; then
     _require_program ssh
     _require_program socat
+
     exampledir="${BASEDIR}/examples/vm"
     if [[ ! -d ${exampledir} ]]; then
       _fatal 1 "Example dir (${exampledir}) not found."
     fi
 
-    if [ ! -d "${confdir}" ]; then
-      if ! mkdir --parent ${verbose} "${confdir}"; then
-        _fatal 1 "${FUNCNAME[0]}: mkdir ${confdir} failed"
+    if [ ! -d "${bootstrap_dir}" ]; then
+      if ! mkdir --parent ${verbose} "${bootstrap_dir}"; then
+        _fatal 1 "${FUNCNAME[0]}: mkdir ${bootstrap_dir} failed"
       fi
     fi
 
-    if ! cp --recursive ${verbose} --update=none "${exampledir}"/* "${confdir}" ; then
-      _fatal 1 "${FUNCNAME[0]}: Could not copy from ${exampledir} to ${confdir}"
+    if ! cp --recursive ${verbose} --update=none "${exampledir}"/* "${bootstrap_dir}" ; then
+      _fatal 1 "${FUNCNAME[0]}: Could not copy from ${exampledir} to ${bootstrap_dir}"
     fi
 
     return 0
@@ -90,6 +75,5 @@ _env() {
     _require_program vmctl
   fi
 
-  cd "${confdir}" > /dev/null || _fatal 1 "${FUNCNAME[0]}: Could not change dir to ${confdir}"
   exec "${SHELL:-/bin/bash}"
 }
