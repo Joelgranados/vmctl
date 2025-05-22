@@ -17,7 +17,7 @@ running.
        $ ./vmctl env --confdir $HOME/vms --verbose --bootstrap
 
    **Note** This will:
-    * Ensure that you have `ssh` and `socat` installed
+    * Check that `ssh` and `socat` are installed
     * Create a configuration directory in $HOME/vms
     * Ensure you have a base `*-base.conf`
     * Ensure you have `common.conf` (to share common vars like
