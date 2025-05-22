@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2025 Samsung Electronics Co., Ltd. All Rights Reserved.
+#
+# Written by Joel Granados <joel.granados@kernel.org>
+
+_qemu_nix_create_nix_sys () {
+  local flake_path="$1"
+  local dst_path="$2"
+  local flake_attr_path="nixosConfigurations.vm.config.system.build.toplevel"
+  local flake_ln_dir="${VMSTATE}"
+  local flake_ln_path="${flake_ln_dir}/flake.nix"
+
+  if ! ln -s "${flake_path}" "${flake_ln_path}"; then
+    _fatal 1 "${FUNCNAME[0]}: Error creating sym link \
+      target:(${flake_path}) dest:(${flake_ln_path})"
+  fi
+
+  local nix_build_cmd="nix build \"${flake_ln_dir}\#${flake_attr_path}\" -o \"${dst_path}\""
+  if ! eval "${nix_build_cmd}"; then
+    _fatal 1 "${FUNCNAME[0]}: Error running '${nix_build_cmd}'"
+  fi
+}
+
+_qemu_nix_create_nix_init () {
+  local init_path="${VMSTATE}/init"
+  if [[ -f ${init_path} ]]; then
+    return
+  fi
+
+  _require_program make
+  _require_program "$(command -v musl-clang 2>&1 > /dev/null || echo gcc)"
+
+  local make_path="${VMSTATE}/Makefile"
+  if [[ ! -f ${make_path} ]]; then
+    if ! ln -s "${BASEDIR}/contrib/nix/Makefile" "${make_path}"; then
+      _fatal 1 "${FUNCNAME[0]}: Error creating sym link for ${make_path}"
+    fi
+  fi
+
+  local c_init_path="${VMSTATE}/vmctl_init.c"
+  if [[ ! -f ${c_init_path} ]]; then
+    if ! ln -s "${BASEDIR}/contrib/nix/vmctl_init.c" "${c_init_path}"; then
+      _fatal 1 "${FUNCNAME[0]}: Error creating sym link for ${c_init_path}"
+    fi
+  fi
+
+  if ! make -C "${VMSTATE}" all; then
+    _fatal 1 "${FUNCNAME[0]}: Error compiling ${c_init_path}"
+  fi
+}
+
+
+qemu_nix_add_noimgnix () {
+  _require_program nix
+  _require_path "${NIX_STORE_PATH}"
+
+  local long="flake-path:,dst-overwrite"
+
+  if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
+    exit 1
+  fi
+
+  eval set -- "$tmp"
+  unset tmp
+
+  while true; do
+    case "$1" in
+      '--flake-path' )
+        local flake_path="$2"; shift 2
+        ;;
+      '--dst-overwrite' )
+        local dst_overwrite=1; shift
+        ;;
+      '--' )
+        shift; break
+        ;;
+      * )
+        _fatal 1 "unknown argument '$1'"
+        ;;
+    esac
+  done
+
+  if [[ ! -v VMSTATE ]]; then
+    _fatal 1 "${FUNCNAME[0]}: VMSTATE global var is not set"
+  fi
+
+  if [[ ! -v flake_path ]]; then
+    _fatal 1 "${FUNCNAME[0]}: missing required '--flake-path' argument"
+  fi
+
+  if [[ ! -f ${flake_path} ]]; then
+    _fatal 1 "${FUNCNAME[0]}: File not found (${flake_path})"
+  fi
+
+  local dst_path="${VMSTATE}/nixsys"
+  if [[ -h ${dst_path} && ! -v dst_overwrite ]]; then
+    _fatal 1 "${FUNCNAME[0]}: Symbolic link (${dst_path}) exists; use --dst-overwrite"
+  fi
+
+  _qemu_nix_create_nix_sys "${flake_path}" "${dst_path}"
+  _qemu_nix_create_nix_init
+
+}

@@ -5,7 +5,7 @@ nix_root := \
 all: init init_img
 
 init:
-  gcc -O3 -Os -s -ffunction-sections -fdata-sections -Wl,--gc-sections -static -o init vmctl_init.c
+  gcc -s -ffunction-sections -fdata-sections -Wl,--gc-sections -static -o init vmctl_init.c
 
 init_img:
   rm -f init.img
