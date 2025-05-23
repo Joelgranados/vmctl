@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2025 Samsung Electronics Co., Ltd. All Rights Reserved.
+#
+# Written by Joel Granados <joel.granados@kernel.org>
+
+qemu_kern_add_custom() {
+  local cmdline_extra=""
+  local share_type="9p"
+  local long="kernel-dir:,boot-dev:,cmdline-extra:,share-virtiofs"
+
+  if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
+    exit 1
+  fi
+
+  eval set -- "$tmp"
+  unset tmp
+
+  while true; do
+    case "$1" in
+      '--kernel-dir' )
+        local kernel_dir="$2"; shift 2
+        ;;
+      '--boot-dev' )
+        local boot_dev="$2"; shift 2
+        ;;
+      '--cmdline-extra' )
+        cmdline_extra="${cmdline_extra} $2"; shift 2
+        ;;
+      'share-virtiofs' )
+        share_type="viofs"; shift
+        ;;
+      '--' )
+        shift; break
+        ;;
+      * )
+        _fatal 1 "unknown argument '$1'"
+        ;;
+    esac
+  done
+
+  if [[ ! -v kernel_dir ]]; then
+    _fatal 1 "${FUNCNAME[0]} Missing required --kernel-dir argument"
+  fi
+
+  for var in GUEST_KERNEL_IMAGE GUEST_KERNEL_CONSOLE; do
+    if [[ ! -v ${var} ]]; then
+      _fatal 1 "${FUNCNAME[0]} Missing var ${var}. Add it to ${VMCONFIG}"
+    fi
+  done
+
+  if [[ ! -v boot_dev ]]; then
+    local boot_dev="/dev/vda1"
+  fi
+
+  local cmdline="root=${boot_dev} console=${GUEST_KERNEL_CONSOLE} ${cmdline_extra}"
+  if [[ -n "$GUEST_KERNEL_APPEND_EXTRA" ]]; then
+    cmdline="$cmdline $GUEST_KERNEL_APPEND_EXTRA"
+  fi
+
+  QEMU_PARAMS+=("-kernel" "${kernel_dir}/${GUEST_KERNEL_IMAGE}")
+  QEMU_PARAMS+=("-append" "$cmdline")
+
+  if [[ ${share_type} == "9p" ]]; then
+    QEMU_PARAMS+=("-virtfs" "local,path=$kernel_dir,security_model=none,readonly=on,mount_tag=kernel_dir")
+  elif [[ ${share_type} == "viofs" ]]; then
+    _fatal 1 "${FUNCNAME[0]}: virtiofs is unsuported for now"
+  else
+    _fatal 1 "${FUNCNAME[0]}: Unknown kernel directory share type (${share_type})"
+  fi
+}
+

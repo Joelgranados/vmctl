@@ -155,21 +155,13 @@ _run() {
   QEMU_PARAMS+=("-pidfile" "${VMROOT}/run/${VMNAME}/pidfile")
 
   if [[ -v kernel_dir ]]; then
-    local cmdline="root=${GUEST_KERNEL_BOOTDEV} console=${GUEST_KERNEL_CONSOLE}"
-
-    # custom kernel
-    QEMU_PARAMS+=("-kernel" "${kernel_dir}/${GUEST_KERNEL_IMAGE}")
-
+    local cmdline_extra=""
     if [[ -v cloud_init_seed ]]; then
-      cmdline="$cmdline ci.datasource=NoCloud"
+      cmdline_extra="ci.datasource=NoCloud"
     fi
 
-    if [[ -n "$GUEST_KERNEL_APPEND_EXTRA" ]]; then
-      cmdline="$cmdline $GUEST_KERNEL_APPEND_EXTRA"
-    fi
-
-    QEMU_PARAMS+=("-append" "$cmdline")
-    QEMU_PARAMS+=("-virtfs" "local,path=$kernel_dir,security_model=none,readonly=on,mount_tag=kernel_dir")
+    qemu_kern_add_custom --kernel-dir "${kernel_dir}" \
+      --cmdline-extra "${cmdline_extra}"
   fi
 
   if [[ -v do_background ]]; then
