@@ -58,10 +58,11 @@ qemu_kern_add_custom() {
   QEMU_PARAMS+=("-kernel" "${kernel_dir}/${GUEST_KERNEL_IMAGE}")
   QEMU_PARAMS+=("-append" "$cmdline")
 
+  local kernel_tag="kernel_dir"
   if [[ ${mod_share} == "9p" ]]; then
-    QEMU_PARAMS+=("-virtfs" "local,path=$kernel_dir,security_model=none,readonly=on,mount_tag=kernel_dir")
+    QEMU_PARAMS+=("-virtfs" "local,path=${kernel_dir},security_model=none,readonly=on,mount_tag=${kernel_tag}")
   elif [[ ${mod_share} == "viofs" ]]; then
-    _fatal 1 "${FUNCNAME[0]}: virtiofs is unsuported for now"
+    qemu_virtiofsd_add_shared --shared-dir "${kernel_dir}" --tag "${kernel_tag}"
   else
     _fatal 1 "${FUNCNAME[0]}: Unknown kernel directory share type (${mod_share})"
   fi
