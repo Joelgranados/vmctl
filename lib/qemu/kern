@@ -6,8 +6,8 @@
 
 qemu_kern_add_custom() {
   local cmdline_extra=""
-  local share_type="9p"
-  local long="kernel-dir:,cmdline-extra:,share-virtiofs"
+  local mod_share="9p"
+  local long="kernel-dir:,cmdline-extra:,mod-share:"
 
   if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
     exit 1
@@ -24,8 +24,8 @@ qemu_kern_add_custom() {
       '--cmdline-extra' )
         cmdline_extra="${cmdline_extra} $2"; shift 2
         ;;
-      'share-virtiofs' )
-        share_type="viofs"; shift
+      'mod-share' )
+        mod_share="$2"; shift 2
         ;;
       '--' )
         shift; break
@@ -58,12 +58,12 @@ qemu_kern_add_custom() {
   QEMU_PARAMS+=("-kernel" "${kernel_dir}/${GUEST_KERNEL_IMAGE}")
   QEMU_PARAMS+=("-append" "$cmdline")
 
-  if [[ ${share_type} == "9p" ]]; then
+  if [[ ${mod_share} == "9p" ]]; then
     QEMU_PARAMS+=("-virtfs" "local,path=$kernel_dir,security_model=none,readonly=on,mount_tag=kernel_dir")
-  elif [[ ${share_type} == "viofs" ]]; then
+  elif [[ ${mod_share} == "viofs" ]]; then
     _fatal 1 "${FUNCNAME[0]}: virtiofs is unsuported for now"
   else
-    _fatal 1 "${FUNCNAME[0]}: Unknown kernel directory share type (${share_type})"
+    _fatal 1 "${FUNCNAME[0]}: Unknown kernel directory share type (${mod_share})"
   fi
 }
 
