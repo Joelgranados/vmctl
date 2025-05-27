@@ -7,7 +7,7 @@
 qemu_kern_add_custom() {
   local cmdline_extra=""
   local share_type="9p"
-  local long="kernel-dir:,boot-dev:,cmdline-extra:,share-virtiofs"
+  local long="kernel-dir:,cmdline-extra:,share-virtiofs"
 
   if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
     exit 1
@@ -20,9 +20,6 @@ qemu_kern_add_custom() {
     case "$1" in
       '--kernel-dir' )
         local kernel_dir="$2"; shift 2
-        ;;
-      '--boot-dev' )
-        local boot_dev="$2"; shift 2
         ;;
       '--cmdline-extra' )
         cmdline_extra="${cmdline_extra} $2"; shift 2
@@ -49,11 +46,11 @@ qemu_kern_add_custom() {
     fi
   done
 
-  if [[ ! -v boot_dev ]]; then
-    local boot_dev="/dev/vda1"
+  if [[ ! -v GUEST_KERNEL_BOOTDEV ]]; then
+    GUEST_KERNEL_BOOTDEV="/dev/vda1"
   fi
 
-  local cmdline="root=${boot_dev} console=${GUEST_KERNEL_CONSOLE} ${cmdline_extra}"
+  local cmdline="root=${GUEST_KERNEL_BOOTDEV} console=${GUEST_KERNEL_CONSOLE} ${cmdline_extra}"
   if [[ -n "$GUEST_KERNEL_APPEND_EXTRA" ]]; then
     cmdline="$cmdline $GUEST_KERNEL_APPEND_EXTRA"
   fi
