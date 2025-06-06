@@ -13,7 +13,7 @@ $(OUT): $(SRC)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 $(IMG): $(OUT)
-	fd "^init$$" | cpio -ov -H newc > $(IMG)
+	find . -type f -name init -printf '%P\n' | cpio -ov -H newc > $(IMG)
 
 all: $(IMG)
 
