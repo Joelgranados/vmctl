@@ -38,13 +38,14 @@ running.
         ```
 
 4. Pre-run prep:
-    `vmctl` supports two ways of running VMs: with and without images. The
-    later requires nix infrastructure and is based on creating the system
-    through the `nix build` command. The former is the "usual" way of running
-    QEMU where the OS is kept in images (usually qcow) in your filesystem. If
-    you are running with NIX, you will not need any image prep. If you are
-    running the "usual" way, pls follow [Prep boot img](#Prep-boot-img) before
-    attempting to run vmctl commands.
+    `vmctl` supports two methods:
+    * Imageless: Requires nix infrastructure and is based on creating the
+      system through the `nix build` command. Goto [Prep nix](#Prep-nix) before
+      running.
+    * Image-Backed: This is the "usual" way of running QEMU where the OS is in
+      images (qcow) on your filesystem. Goto [Prep boot img](#Prep-boot-img)
+      before running.
+
 
 5. Start from an example and edit it as you see fit.
 
@@ -106,6 +107,26 @@ image built by `archbase` has support for this built-in and the
 that configures the image to support this. In non-cloud-init settings, see
 `contrib/systemd` for a systemd service that should be usable on most
 distributions.
+
+## Prep nix
+
+Imageless mode depends on nix commands and flake infrastrcture. If you are on
+nixos, add the following text to your configuration file (usually located at
+/etc/nixos/configuration.nix):
+
+    ```
+    nix = {
+        package = pkgs.nix;
+        extraOptions = ''
+          experimental-features = nix-command flakes
+        '';
+    };
+    ```
+
+On the other hand, if you have installed nix on another distribution (like Debian),
+add the following text to your configruation file (usually /etc/nix/nix.conf):
+
+    experimental-features = nix-command flakes
 
 
 ## Prep boot img
