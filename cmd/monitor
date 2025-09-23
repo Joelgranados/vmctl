@@ -54,6 +54,7 @@ _monitor() {
   )
 
   if [[ $# -gt 0 ]]; then
+    args[0]="-,escape=0x1f"
     echo "$@" | socat "${args[@]}"
   else
     _log "use ^- to detach from monitor"
