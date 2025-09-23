@@ -57,7 +57,7 @@ _poweroff() {
   fi
 
   if echo "info status" | socat "${args[@]}" >> "${VMLOG}/full" 2>&1; then
-    _fatal 1 "poweroff returned success but did not execute a power off." \
+    _fatal 1 "poweroff through ${VMRUN}/monitor failed to poweroff" \
       "Try the kill command"
   fi
 }
