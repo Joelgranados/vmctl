@@ -6,6 +6,7 @@
 
 _qemu_nix_create_nix_sys () {
   local dst_path="$1"
+  local exec_create="$2"
   local flake_attr_path="nixosConfigurations.vm.config.system.build.toplevel"
   local flake_dst_dir="${VMSTATE}/nixstage"
   local flake_dst_path="${flake_dst_dir}/flake.nix"
@@ -15,13 +16,31 @@ _qemu_nix_create_nix_sys () {
     _fatal 1 "${FUNCNAME[0]}: File not found (${NIX_FLAKE_PATH})"
   fi
 
-  _add_pre_cmd "mkdir -p \"${flake_dst_dir}\""
-  _add_pre_cmd "cp --remove-destination \"${NIX_FLAKE_PATH}\" \"${flake_dst_path}\""
+  local cmd="mkdir -p \"${flake_dst_dir}\""
+  if [[ ${exec_create} == "no" ]]; then
+    _add_pre_cmd "${cmd}"
+  else
+    eval "${cmd}"
+  fi
 
-  _add_pre_cmd "nix build \
+  cmd="cp --remove-destination \"${NIX_FLAKE_PATH}\" \"${flake_dst_path}\""
+
+  if [[ ${exec_create} == "no" ]]; then
+    _add_pre_cmd "${cmd}"
+  else
+    eval "${cmd}"
+  fi
+
+  cmd="nix build \
     'path:${flake_dst_dir}#${flake_attr_path}' \
     -o \"${dst_path}\" \
     --no-write-lock-file"
+
+  if [[ ${exec_create} == "no" ]]; then
+    _add_pre_cmd "${cmd}"
+  else
+    eval "${cmd}"
+  fi
 }
 
 _qemu_nix_create_nix_init () {
@@ -53,11 +72,20 @@ qemu_nix_add_noimgnix () {
   _require_vars "VMSTATE"
 
   local nixsys_link="${VMSTATE}/nixsys"
-  local nixsys_path=""; nixsys_path="$(readlink -f "${nixsys_link}")"
   : "${NIX_SYS_BUILD_FORCE:="no"}" # defaults to "no" if not set
   if [[ ${NIX_SYS_BUILD_FORCE} == "yes" || ! -h ${nixsys_link} ]]; then
-    _qemu_nix_create_nix_sys "${nixsys_link}"
+    local pre_create_nixsys_link="no"
+    if [[ ! -e ${nixsys_link} ]]; then
+      # Commands are not run but added to "$VMPRE" with _add_pre_cmd
+      # This means that ${nixsys_link} might not exist
+      # ${nixsys_link} needs to be there for readlink to work
+      # Pre-emptively run the ${nixsys_link} creation
+      pre_create_nixsys_link="yes"
+    fi
+
+   _qemu_nix_create_nix_sys "${nixsys_link}" "${pre_create_nixsys_link}"
   fi
+  local nixsys_path=""; nixsys_path="$(readlink -f "${nixsys_link}")"
 
   qemu_share_add --shared-dir "${NIX_STORE_PATH}" \
       --tag "nixstore" \
