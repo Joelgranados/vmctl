@@ -79,7 +79,7 @@ _ssh() {
   if [[ -v do_wait ]]; then
     _ssh_echo "waiting for ssh to become available"
 
-    until ssh "${args[@]}" -o ConnectTimeout=1 localhost echo ok 2>/dev/null; do
+    until ssh "${args[@]}" -o ConnectTimeout=1 localhost true; do
       _ssh_echo "."
       sleep 1
     done
