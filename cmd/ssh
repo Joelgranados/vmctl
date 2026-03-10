@@ -15,11 +15,17 @@ Options:
   -p, --port     port to connect to (default: \"$GUEST_SSH_PORT\")
   -l, --login    the user to log in as (default: \"$GUEST_SSH_USER\")"
 
+_ssh_echo() {
+  if [[ ! -v ssh_silent ]]; then
+    echo -n "$1"
+  fi
+}
+
 _ssh() {
   _require_program ssh
 
-  local short="+w,p:,l:,h"
-  local long="wait,port:,login:,help"
+  local short="+w,p:,l:,h,s"
+  local long="wait,port:,login:,help,silent"
 
   if ! tmp=$(getopt -o "$short" --long "$long" -n "$BASENAME" -- "$@"); then
     exit 1
@@ -41,6 +47,9 @@ _ssh() {
         ;;
       '-h' | '--help' )
         _usage "$USAGE" 0
+        ;;
+      '-s' | '--silent' )
+        ssh_silent=1; shift
         ;;
       '--' )
         shift; break
@@ -68,10 +77,10 @@ _ssh() {
   )
 
   if [[ -v do_wait ]]; then
-    echo -n "waiting for ssh to become available"
+    _ssh_echo "waiting for ssh to become available"
 
     until ssh "${args[@]}" -o ConnectTimeout=1 localhost echo ok 2>/dev/null; do
-      echo -n .
+      _ssh_echo "."
       sleep 1
     done
   fi
