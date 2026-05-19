@@ -3,11 +3,44 @@
 # Copyright (c) 2025 Samsung Electronics Co., Ltd. All Rights Reserved.
 #
 # Written by Joel Granados <joel.granados@kernel.org>
+qemu_viommu() {
+  if [[ ${GUEST_VIOMMU} -eq 2 ]];then
+    _fatal 1 "IOMMU cannot be added twice"
+  fi
+
+  if ! tmp=$(getopt -o "" --long "args:" -n "${FUNCNAME[0]}" -- "$@"); then
+    exit 1
+  fi
+
+  eval set -- "$tmp"
+  unset tmp
+
+  while true; do
+    case "$1" in
+      '--args' )
+        local args="$2"; shift 2
+        ;;
+      '--' )
+        shift; break
+        ;;
+      * )
+        _fatal 1 "unknown argument '$1'"
+        ;;
+    esac
+  done
+
+  if [[ ! -v args ]]; then
+    _fatal 1 "Missing viommu arguments!!"
+  fi
+
+  QEMU_PARAMS+=("-device" "${args}")
+
+  # this is to signify that it was already added
+  GUEST_VIOMMU=2
+}
 
 qemu_viommu_intel() {
-  local long="extra-args:"
-
-  if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
+  if ! tmp=$(getopt -o "" --long "extra-args:" -n "${FUNCNAME[0]}" -- "$@"); then
     exit 1
   fi
 
@@ -34,5 +67,5 @@ qemu_viommu_intel() {
     iommu_arg="${iommu_arg},${extra_args}"
   fi
 
-  QEMU_PARAMS+=("-device" "${iommu_arg}")
+  qemu_viommu --args "${iommu_arg}"
 }
