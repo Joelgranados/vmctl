@@ -38,13 +38,18 @@ qemu_share_add_virtiofsd() {
 qemu_share_add_9p() {
   local share_dir="$1"
   local tag="$2"
+  local mount_mode="${3:-ro}"
+  local readonly="on"
+  if [[ "${mount_mode}" == "rw" ]]; then
+    readonly="off"
+  fi
 
   QEMU_PARAMS+=("-virtfs" \
-    "local,path=${share_dir},security_model=none,readonly=on,mount_tag=${tag}")
+    "local,path=${share_dir},security_model=none,readonly=${readonly},mount_tag=${tag}")
 }
 
 qemu_share_add() {
-  local long="shared-dir:,tag:,share-type:,vm-dir:,extra:"
+  local long="shared-dir:,tag:,share-type:,vm-dir:,extra:,writable"
 
   if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
     exit 1
@@ -70,6 +75,9 @@ qemu_share_add() {
       '--extra' )
         local extra="$2"; shift 2;
         ;;
+      '--writable' )
+        local writable="yes"; shift
+        ;;
       '--' )
         shift; break
         ;;
@@ -93,8 +101,14 @@ qemu_share_add() {
     local share_type="9p"
   fi
 
+  # Shares are mounted read-only by default; --writable opts into read-write.
+  local mount_mode="ro"
+  if [[ -v writable ]]; then
+    mount_mode="rw"
+  fi
+
   if [[ "${share_type}" == "9p" ]]; then
-    qemu_share_add_9p "${shared_dir}" "${tag}"
+    qemu_share_add_9p "${shared_dir}" "${tag}" "${mount_mode}"
   elif [[ "${share_type}" == "virtiofs" ]]; then
     qemu_share_add_virtiofsd "${shared_dir}" "${tag}" "${extra:-}"
   else
@@ -105,7 +119,7 @@ qemu_share_add() {
     if [[ ! -v NIX_STORE_PATH ]]; then
       _log "vm-dir ignored! it's only active in NIX"
     fi
-    NIX_MOUNTS+=("${tag},${vm_dir},${share_type}")
+    NIX_MOUNTS+=("${tag},${vm_dir},${share_type},${mount_mode}")
   fi
 }
 

@@ -105,11 +105,13 @@ int read_until(const char *str, char c)
 	return idx;
 }
 
-/* mount_str: mount str (SHARE_NAME;MOUNT_PATH;MOUNT_TYPE) */
+/* mount_str: mount str (SHARE_NAME,MOUNT_PATH,MOUNT_TYPE[,MODE]) where the
+ * optional MODE is "rw" or "ro" (the default when the field is absent). */
 int mount_from_str(char *mount_str)
 {
 	int idx, i = 0, end = 0;
-	char *strs[3] = {mount_str, NULL, NULL};
+	char *strs[4] = {mount_str, NULL, NULL, NULL};
+	unsigned long flags = MS_RDONLY; /* read-only by default */
 
 	info(1, "Mount string: %s", mount_str);
 	do {
@@ -128,21 +130,27 @@ int mount_from_str(char *mount_str)
 			break;
 
 		i++;
-	} while (i < 3);
+	} while (i < 4);
 
 	if (strs[1] == NULL || strs[2] == NULL)
 		return -1;
 
+	/* Optional 4th field selects the mount mode: "rw" clears the
+	 * read-only default; anything else (including absent) stays read-only. */
+	if (strs[3] != NULL && strcmp(strs[3], "rw") == 0)
+		flags &= ~MS_RDONLY;
+
 	if (ensure_dir(strs[1]))
 		return -1;
 
-	if (mount(strs[0], strs[1], strs[2], 0, "") == -1) {
+	if (mount(strs[0], strs[1], strs[2], flags, "") == -1) {
 		info(1, "Error: mounting %s at %s. errno %d",
 		     strs[0], strs[1], errno);
 		return 1;
 	}
 
-	info(1, "Mounted %s at %s\n", strs[0], strs[1]);
+	info(1, "Mounted %s at %s (%s)\n", strs[0], strs[1],
+	     (flags & MS_RDONLY) ? "ro" : "rw");
 
 	return 0;
 }
