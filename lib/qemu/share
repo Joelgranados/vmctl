@@ -18,12 +18,13 @@ qemu_share_add_virtiofsd() {
   _require_program virtiofsd
   local share_dir="$1"
   local tag="$2"
+  local extra="${3:-}"
   local socket_path="${VMRUN}/${tag}.sock"
   local devid="char${tag}"
   local chardev_params="socket,id=${devid},path=${socket_path}"
   local device_params="vhost-user-fs-pci,chardev=${devid},tag=${tag}"
   cmd="virtiofsd --shared-dir \"${shared_dir}\" --tag \"${tag}\" \
-    --socket-path \"${socket_path}\" --log-level off &"
+    --socket-path \"${socket_path}\" ${extra} --log-level off &"
   _add_pre_cmd "${cmd}"
 
   _add_clean_procs_name "$(cat "${socket_path}.pid" 2> /dev/null)" "virtiofsd"
@@ -43,7 +44,7 @@ qemu_share_add_9p() {
 }
 
 qemu_share_add() {
-  local long="shared-dir:,tag:,share-type:,vm-dir:"
+  local long="shared-dir:,tag:,share-type:,vm-dir:,extra:"
 
   if ! tmp=$(getopt -o "" --long "$long" -n "${FUNCNAME[0]}" -- "$@"); then
     exit 1
@@ -65,6 +66,9 @@ qemu_share_add() {
         ;;
       '--vm-dir' )
         local vm_dir="$2"; shift 2;
+        ;;
+      '--extra' )
+        local extra="$2"; shift 2;
         ;;
       '--' )
         shift; break
@@ -92,7 +96,7 @@ qemu_share_add() {
   if [[ "${share_type}" == "9p" ]]; then
     qemu_share_add_9p "${shared_dir}" "${tag}"
   elif [[ "${share_type}" == "virtiofs" ]]; then
-    qemu_share_add_virtiofsd "${shared_dir}" "${tag}"
+    qemu_share_add_virtiofsd "${shared_dir}" "${tag}" "${extra:-}"
   else
     _fatal 1 "${FUNCNAME[0]}: Unknown directory share type (${share_type})"
   fi
